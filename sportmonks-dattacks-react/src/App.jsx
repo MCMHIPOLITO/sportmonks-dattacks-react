@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 
 const API_URL =
-  "https://api.sportmonks.com/v3/football/livescores/inplay?api_token=0m3wQMYU2HJdR6FmEFIkeCPtQhCS42wogMnxfcTeFc9iktmiSiFlDj2gavhm&include=periods;scores;trends;participants;statistics&filters=fixtureStatisticTypes:34,44;trendTypes:34,44&timezone=Europe/London&populate=400";
+  "https://api.sportmonks.com/v3/football/livescores/inplay?api_token=0m3wQMYU2HJdR6FmEFIkeCPtQhCS42wogMnxfcTeFc9iktmiSiFlDj2gavhm&include=periods;scores;trends;participants;statistics&filters=fixtureStatisticTypes:34,42,43,44,45,52,58,83,98,99;trendTypes:34,42,43,44,45,52,58,83,98,99&timezone=Europe/London&populate=400";
 
 function formatMMSS(seconds) {
   const mm = String(Math.floor(seconds / 60)).padStart(2, "0");
@@ -36,7 +36,6 @@ function getDangerousAttacks(fixture) {
     .filter((t) => t.type_id === 44 && t.period_number === 2)
     .reduce((a, t) => a + safeNum(t.value), 0);
 
-  // fallback: if no period info, use total as 2HT
   if (first === 0 && second === 0) {
     second = trends
       .filter((t) => t.type_id === 44)
@@ -73,7 +72,6 @@ export default function App() {
   const intervalRef = useRef(null);
   const tickRef = useRef(null);
 
-  // Poll API every 3s
   useEffect(() => {
     let abort = new AbortController();
 
@@ -103,7 +101,6 @@ export default function App() {
     };
   }, []);
 
-  // 1-second ticking timer
   useEffect(() => {
     tickRef.current = setInterval(() => {
       setElapsed((s) => s + 1);
@@ -115,15 +112,12 @@ export default function App() {
 
   return (
     <div className="p-6">
-      {/* Header with status indicator */}
+      {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-2xl font-bold">Live Dangerous Attacks</h1>
 
         <div className="flex items-center space-x-4">
-          {/* MH initials */}
           <span className="font-bold text-gray-700">MH</span>
-
-          {/* Status + timer */}
           <div className="flex items-center space-x-2">
             <div
               className={`w-3 h-3 rounded-full ${
@@ -142,12 +136,16 @@ export default function App() {
       <table className="min-w-full border">
         <thead>
           <tr>
-            <th className="sticky-th px-2 py-1">Match</th>
-            <th className="sticky-th px-2 py-1">Time</th>
-            <th className="sticky-th px-2 py-1">Corners</th>
-            <th className="sticky-th px-2 py-1">D.Attack 1HT</th>
-            <th className="sticky-th px-2 py-1">D.Attack 2HT</th>
-            <th className="sticky-th px-2 py-1">Delta</th>
+            <th className="sticky-th px-2 py-1 text-left">Match</th>
+            <th className="sticky-th px-2 py-1 text-center">Time</th>
+            <th className="sticky-th px-1 py-1 text-center w-20">Corners</th>
+            <th className="sticky-th px-1 py-1 text-center w-28">
+              D.Attack 1HT
+            </th>
+            <th className="sticky-th px-1 py-1 text-center w-28">
+              D.Attack 2HT
+            </th>
+            <th className="sticky-th px-1 py-1 text-center w-20">Delta</th>
           </tr>
         </thead>
         <tbody>
@@ -161,14 +159,14 @@ export default function App() {
             return (
               <tr key={fixture.id}>
                 <td className="border px-2 py-1">{match}</td>
-                <td className="border px-2 py-1 text-center">
+                <td className="border px-1 py-1 text-center">
                   {minute !== "-" ? `${minute}'` : "-"}
                 </td>
-                <td className="border px-2 py-1 text-center">{corners}</td>
-                <td className="border px-2 py-1 text-center">{first}</td>
-                <td className="border px-2 py-1 text-center">{second}</td>
+                <td className="border px-1 py-1 text-center">{corners}</td>
+                <td className="border px-1 py-1 text-center">{first}</td>
+                <td className="border px-1 py-1 text-center">{second}</td>
                 <td
-                  className={`border px-2 py-1 text-center font-semibold ${
+                  className={`border px-1 py-1 text-center font-semibold ${
                     delta > 0
                       ? "text-green-600"
                       : delta < 0
