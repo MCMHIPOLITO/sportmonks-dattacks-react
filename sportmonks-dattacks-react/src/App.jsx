@@ -132,7 +132,7 @@ export default function App() {
         <h1 className="text-2xl font-bold">Live Dangerous Attacks</h1>
 
         <div className="flex items-center space-x-4">
-          <span className="font-bold text-gray-700">MH</span>
+          <span className="font-bold text-gray-700">V00</span>
           <div className="flex items-center space-x-2">
             <div
               className={`w-3 h-3 rounded-full ${
