@@ -14,7 +14,6 @@ function formatMMSS(seconds) {
 const safeNum = (v, d = 0) =>
   typeof v === "number" && !isNaN(v) ? v : parseInt(v) || d;
 
-// Extract trends array in a safe format
 function extractTrends(fixture) {
   let trends = fixture?.trends?.data || fixture?.trends || [];
   return trends.map((t) => ({
@@ -24,15 +23,12 @@ function extractTrends(fixture) {
   }));
 }
 
-// Get total corners (Trend=34)
 function getCorners(fixture) {
-  const trends = extractTrends(fixture);
-  return trends
+  return extractTrends(fixture)
     .filter((t) => t.type_id === 34)
     .reduce((a, t) => a + safeNum(t.value), 0);
 }
 
-// Get Dangerous Attacks (Trend=44) by half
 function getDangerousAttacks(fixture) {
   const trends = extractTrends(fixture);
   const first = trends
@@ -44,7 +40,6 @@ function getDangerousAttacks(fixture) {
   return { first, second };
 }
 
-// Get teams
 function getTeams(fixture) {
   const parts = fixture?.participants?.data || fixture?.participants || [];
   const home = parts.find((p) => (p.meta?.location || p.location) === "home");
@@ -52,7 +47,6 @@ function getTeams(fixture) {
   return `${home?.name || "Home"} vs ${away?.name || "Away"}`;
 }
 
-// Get minute
 function getMinute(fixture) {
   const periods = fixture?.periods?.data || [];
   const live = periods.find((p) => p?.is_current === true);
@@ -63,24 +57,18 @@ export default function App() {
   const [data, setData] = useState([]);
   const [elapsed, setElapsed] = useState(0);
   const [lastFetchOk, setLastFetchOk] = useState(false);
-  const intervalRef = useRef(null);
   const tickRef = useRef(null);
 
-  // Poll API every 3s
+  // Fetch API every 3 seconds
   useEffect(() => {
-    let abort = new AbortController();
-
     const fetchData = async () => {
       try {
-        const res = await fetch(API_URL, {
-          signal: abort.signal,
-          cache: "no-store",
-        });
+        const res = await fetch(API_URL, { cache: "no-store" });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const json = await res.json();
         setData(Array.isArray(json?.data) ? json.data : []);
-        setElapsed(0); // reset timer
-        setLastFetchOk(true); // success
+        setElapsed(0); // reset counter to 0 on success
+        setLastFetchOk(true);
       } catch (err) {
         console.error("Fetch error:", err);
         setLastFetchOk(false);
@@ -88,23 +76,20 @@ export default function App() {
     };
 
     fetchData();
-    intervalRef.current = setInterval(fetchData, 3000);
-
-    return () => {
-      abort.abort();
-      if (intervalRef.current) clearInterval(intervalRef.current);
-    };
+    const interval = setInterval(fetchData, 3000);
+    return () => clearInterval(interval);
   }, []);
 
-  // 1-second ticking timer
+  // Timer: increase by 3s every 3s only if last fetch succeeded
   useEffect(() => {
+    if (tickRef.current) clearInterval(tickRef.current);
+
     tickRef.current = setInterval(() => {
-      setElapsed((s) => s + 1);
-    }, 1000);
-    return () => {
-      if (tickRef.current) clearInterval(tickRef.current);
-    };
-  }, []);
+      setElapsed((prev) => (lastFetchOk ? prev + 3 : prev));
+    }, 3000);
+
+    return () => clearInterval(tickRef.current);
+  }, [lastFetchOk]);
 
   return (
     <div className="p-6">
@@ -113,17 +98,16 @@ export default function App() {
         <h1 className="text-2xl font-bold">Live Dangerous Attacks</h1>
 
         <div className="flex items-center space-x-2">
+          {/* Dot: green if refreshing works, red if not */}
           <div
             className={`w-3 h-3 rounded-full ${
               lastFetchOk ? "bg-green-500 animate-pulse" : "bg-red-500"
             }`}
-            title={lastFetchOk ? "Last refresh OK" : "Last refresh failed"}
+            title={lastFetchOk ? "Refreshing OK" : "Refreshing failed"}
           ></div>
+
           <span className="text-sm text-gray-800">
             API last updated: <strong>{formatMMSS(elapsed)}</strong>
-            {lastFetchOk && (
-              <span className="ml-2 text-green-600 font-medium">+00:03</span>
-            )}
           </span>
         </div>
       </div>
