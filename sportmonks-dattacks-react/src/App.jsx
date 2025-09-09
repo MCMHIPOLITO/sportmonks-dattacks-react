@@ -3,7 +3,6 @@ import React, { useEffect, useRef, useState } from "react";
 const API_URL =
   "https://api.sportmonks.com/v3/football/livescores/inplay?api_token=0m3wQMYU2HJdR6FmEFIkeCPtQhCS42wogMnxfcTeFc9iktmiSiFlDj2gavhm&include=periods;scores;trends;participants;statistics&filters=fixtureStatisticTypes:34,44;trendTypes:34,44&timezone=Europe/London&populate=400";
 
-// Format seconds -> "MM:SS"
 function formatMMSS(seconds) {
   const mm = String(Math.floor(seconds / 60)).padStart(2, "0");
   const ss = String(seconds % 60).padStart(2, "0");
@@ -30,20 +29,35 @@ function getCorners(fixture) {
 
 function getDangerousAttacks(fixture) {
   const trends = extractTrends(fixture);
-  const first = trends
+  let first = trends
     .filter((t) => t.type_id === 44 && t.period_number === 1)
     .reduce((a, t) => a + safeNum(t.value), 0);
-  const second = trends
+  let second = trends
     .filter((t) => t.type_id === 44 && t.period_number === 2)
     .reduce((a, t) => a + safeNum(t.value), 0);
+
+  // fallback: if no period info, use total as 2HT
+  if (first === 0 && second === 0) {
+    second = trends
+      .filter((t) => t.type_id === 44)
+      .reduce((a, t) => a + safeNum(t.value), 0);
+  }
+
   return { first, second };
 }
 
 function getTeams(fixture) {
   const parts = fixture?.participants?.data || fixture?.participants || [];
-  const home = parts.find((p) => (p.meta?.location || p.location) === "home");
-  const away = parts.find((p) => (p.meta?.location || p.location) === "away");
-  return `${home?.name || "Home"} vs ${away?.name || "Away"}`;
+  if (parts.length >= 2) {
+    const home =
+      parts.find((p) => (p.meta?.location || p.location) === "home") ||
+      parts[0];
+    const away =
+      parts.find((p) => (p.meta?.location || p.location) === "away") ||
+      parts[1];
+    return `${home?.name || "Home"} vs ${away?.name || "Away"}`;
+  }
+  return "Unknown vs Unknown";
 }
 
 function getMinute(fixture) {
@@ -101,7 +115,7 @@ export default function App() {
 
   return (
     <div className="p-6">
-      {/* Header with status indicator + initials */}
+      {/* Header with status indicator */}
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-2xl font-bold">Live Dangerous Attacks</h1>
 
