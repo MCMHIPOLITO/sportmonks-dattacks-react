@@ -10,7 +10,6 @@ function formatMMSS(seconds) {
   return `${mm}:${ss}`;
 }
 
-// Safely convert to number
 const safeNum = (v, d = 0) =>
   typeof v === "number" && !isNaN(v) ? v : parseInt(v) || d;
 
@@ -57,17 +56,23 @@ export default function App() {
   const [data, setData] = useState([]);
   const [elapsed, setElapsed] = useState(0);
   const [lastFetchOk, setLastFetchOk] = useState(false);
+  const intervalRef = useRef(null);
   const tickRef = useRef(null);
 
-  // Fetch API every 3 seconds
+  // Poll API every 3s
   useEffect(() => {
+    let abort = new AbortController();
+
     const fetchData = async () => {
       try {
-        const res = await fetch(API_URL, { cache: "no-store" });
+        const res = await fetch(API_URL, {
+          signal: abort.signal,
+          cache: "no-store",
+        });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const json = await res.json();
         setData(Array.isArray(json?.data) ? json.data : []);
-        setElapsed(0); // reset counter to 0 on success
+        setElapsed(0);
         setLastFetchOk(true);
       } catch (err) {
         console.error("Fetch error:", err);
@@ -76,39 +81,46 @@ export default function App() {
     };
 
     fetchData();
-    const interval = setInterval(fetchData, 3000);
-    return () => clearInterval(interval);
+    intervalRef.current = setInterval(fetchData, 3000);
+
+    return () => {
+      abort.abort();
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
   }, []);
 
-  // Timer: increase by 3s every 3s only if last fetch succeeded
+  // 1-second ticking timer
   useEffect(() => {
-    if (tickRef.current) clearInterval(tickRef.current);
-
     tickRef.current = setInterval(() => {
-      setElapsed((prev) => (lastFetchOk ? prev + 3 : prev));
-    }, 3000);
-
-    return () => clearInterval(tickRef.current);
-  }, [lastFetchOk]);
+      setElapsed((s) => s + 1);
+    }, 1000);
+    return () => {
+      if (tickRef.current) clearInterval(tickRef.current);
+    };
+  }, []);
 
   return (
     <div className="p-6">
-      {/* Header with status indicator */}
+      {/* Header with status indicator + initials */}
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-2xl font-bold">Live Dangerous Attacks</h1>
 
-        <div className="flex items-center space-x-2">
-          {/* Dot: green if refreshing works, red if not */}
-          <div
-            className={`w-3 h-3 rounded-full ${
-              lastFetchOk ? "bg-green-500 animate-pulse" : "bg-red-500"
-            }`}
-            title={lastFetchOk ? "Refreshing OK" : "Refreshing failed"}
-          ></div>
+        <div className="flex items-center space-x-4">
+          {/* MH initials */}
+          <span className="font-bold text-gray-700">MH</span>
 
-          <span className="text-sm text-gray-800">
-            API last updated: <strong>{formatMMSS(elapsed)}</strong>
-          </span>
+          {/* Status + timer */}
+          <div className="flex items-center space-x-2">
+            <div
+              className={`w-3 h-3 rounded-full ${
+                lastFetchOk ? "bg-green-500 animate-pulse" : "bg-red-500"
+              }`}
+              title={lastFetchOk ? "Last refresh OK" : "Last refresh failed"}
+            ></div>
+            <span className="text-sm text-gray-800">
+              API last updated: <strong>{formatMMSS(elapsed)}</strong>
+            </span>
+          </div>
         </div>
       </div>
 
