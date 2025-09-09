@@ -36,6 +36,7 @@ function getDangerousAttacks(fixture) {
     .filter((t) => t.type_id === 44 && t.period_number === 2)
     .reduce((a, t) => a + safeNum(t.value), 0);
 
+  // fallback: se não tem por período, usa total
   if (first === 0 && second === 0) {
     second = trends
       .filter((t) => t.type_id === 44)
@@ -46,7 +47,12 @@ function getDangerousAttacks(fixture) {
 }
 
 function getTeams(fixture) {
-  const parts = fixture?.participants?.data || fixture?.participants || [];
+  let parts =
+    fixture?.participants?.data ||
+    (Array.isArray(fixture?.participants)
+      ? fixture.participants
+      : Object.values(fixture?.participants || {}));
+
   if (parts.length >= 2) {
     const home =
       parts.find((p) => (p.meta?.location || p.location) === "home") ||
@@ -83,7 +89,16 @@ export default function App() {
         });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const json = await res.json();
-        setData(Array.isArray(json?.data) ? json.data : []);
+
+        // ✅ Corrigido: aceita tanto array quanto objeto único
+        if (Array.isArray(json?.data)) {
+          setData(json.data);
+        } else if (json?.data) {
+          setData([json.data]);
+        } else {
+          setData([]);
+        }
+
         setElapsed(0);
         setLastFetchOk(true);
       } catch (err) {
